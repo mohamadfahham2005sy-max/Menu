@@ -1,8 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <title>AR Menu</title>
+
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+<script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
 <style>
   body { margin:0; overflow:hidden; }
@@ -12,7 +15,7 @@
     left: 50%;
     transform: translateX(-50%);
     background: rgba(0,0,0,0.7);
-    color: #fff;
+    color: white;
     padding: 10px 16px;
     border-radius: 20px;
     font-family: sans-serif;
@@ -23,92 +26,30 @@
 
 <body>
 
-<div id="hint">وجّه الكاميرا على الطاولة واضغط لوضع الطبق</div>
+<div id="hint">وجّه الكاميرا على صورة المنيو</div>
 
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/webxr/ARButton.js';
+<a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
 
-let camera, scene, renderer;
-let reticle;
-let dish;
+  <a-marker type="pattern" url="pattern.patt">
 
-init();
-animate();
+    <a-image
+      id="dish"
+      rotation="-90 0 0"
+      width="1"
+      height="1">
+    </a-image>
 
-function init() {
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera();
+  </a-marker>
 
-  renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.xr.enabled = true;
-  document.body.appendChild(renderer.domElement);
+  <a-entity camera></a-entity>
+</a-scene>
 
-  document.body.appendChild(ARButton.createButton(renderer, {
-    requiredFeatures: ['hit-test']
-  }));
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const dish = params.get('dish') || 'burger.png';
 
-  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-  scene.add(light);
-
-  reticle = new THREE.Mesh(
-    new THREE.RingGeometry(0.07, 0.09, 32).rotateX(-Math.PI / 2),
-    new THREE.MeshBasicMaterial()
-  );
-  reticle.matrixAutoUpdate = false;
-  reticle.visible = false;
-  scene.add(reticle);
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const dishName = urlParams.get('dish') || 'pizza.png';
-
-  const texture = new THREE.TextureLoader().load('images/' + dishName);
-  const geometry = new THREE.PlaneGeometry(0.4, 0.4);
-  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-  dish = new THREE.Mesh(geometry, material);
-  dish.rotation.x = -Math.PI / 2;
-
-  renderer.domElement.addEventListener('click', () => {
-    if (reticle.visible) {
-      dish.position.setFromMatrixPosition(reticle.matrix);
-      scene.add(dish);
-      document.getElementById('hint').style.display = 'none';
-    }
-  });
-}
-
-function animate() {
-  renderer.setAnimationLoop(render);
-}
-
-function render(timestamp, frame) {
-  if (frame) {
-    const referenceSpace = renderer.xr.getReferenceSpace();
-    const session = renderer.xr.getSession();
-
-    if (!renderer.hitTestSourceRequested) {
-      session.requestReferenceSpace('viewer').then(space => {
-        session.requestHitTestSource({ space }).then(source => {
-          renderer.hitTestSource = source;
-        });
-      });
-      renderer.hitTestSourceRequested = true;
-    }
-
-    if (renderer.hitTestSource) {
-      const hitTestResults = frame.getHitTestResults(renderer.hitTestSource);
-      if (hitTestResults.length) {
-        const hit = hitTestResults[0];
-        reticle.visible = true;
-        reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-      } else {
-        reticle.visible = false;
-      }
-    }
-  }
-  renderer.render(scene, camera);
-}
+  document.querySelector('#dish')
+    .setAttribute('src', 'images/' + dish);
 </script>
 
 </body>
